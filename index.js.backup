@@ -1,0 +1,1542 @@
+#!/usr/bin/env node
+
+import fse from "fs-extra";
+import path from "path";
+import chalk from "chalk";
+import { fileURLToPath } from "url";
+import { execSync } from "child_process";
+import readline from "readline";
+
+// ESM での fs-extra の互換性確保
+const fs = fse.default || fse;
+
+// ES Modules環境でのパス解決
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+const question = (query) =>
+  new Promise((resolve) => rl.question(query, resolve));
+
+async function init() {
+  const projectName = process.argv[2] || "my-isotope-app";
+  const root = path.resolve(projectName);
+
+  // ポートの競合を事前に解消
+  console.log(chalk.cyan("🧹 Cleaning up ports 8000 and 5173..."));
+  try {
+    execSync('pkill -9 -f "vite" || true');
+    execSync('pkill -9 -f "php -S localhost:8000" || true');
+  } catch (e) {}
+
+  const args = process.argv.slice(2);
+  let styleChoice = args
+    .find((arg) => arg.startsWith("--style="))
+    ?.split("=")[1];
+
+  console.log(
+    chalk.blueBright(
+      `\n⚛️  Isotope: Stabilizing new atomic structure at ${root}...\n`,
+    ),
+  );
+
+  // 引数がない場合は対話型
+  if (!styleChoice) {
+    styleChoice = await question(
+      "Which CSS framework? (tailwind / scss / none): ",
+    );
+  }
+  rl.close();
+
+  console.log(chalk.yellow(`\n📂 Creating project directories...`));
+
+  // 1. ディレクトリ構造の作成
+  const dirs = [
+    "app/home",
+    "app/about",
+    "core",
+    "public/dist",
+    "src",
+    "docs/framework",
+    "src/styles",
+    "app/layouts",
+    "src/components",
+  ];
+  dirs.forEach((dir) => {
+    const dirPath = path.join(root, dir);
+    fs.ensureDirSync(dirPath);
+    console.log(chalk.gray(`  Created: ${dirPath}`));
+  });
+
+  console.log(chalk.yellow(`\n📝 Generating templates...`));
+
+  // スタイル設定とパッケージ依存関係の定義
+  let cssImport = "";
+  let tailwindConfig = "";
+  let postcssConfig = "";
+  let styleContent = "";
+  let pageIsxContent = "";
+
+  const pkgDeps = {
+    react: "^18.2.0",
+    "react-dom": "^18.2.0",
+  };
+
+  const pkgDevDeps = {
+    "@vitejs/plugin-react": "^4.0.0",
+    vite: "^4.3.0",
+    typescript: "^5.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/node": "^20.0.0",
+    concurrently: "^8.2.0",
+  };
+
+  const viteBase = "http://localhost:5173";
+
+  // 8.1 Isotope Type Definition
+  const isotopeTs = `export function proton(strings: TemplateStringsArray, ...values: any[]): any {
+  return null;
+}`;
+  fs.writeFileSync(path.join(root, "src/isotope.ts"), isotopeTs);
+
+  // --- スタイルごとのコンテンツ生成 ---
+  if (styleChoice === "tailwind") {
+    cssImport = `import './styles/globals.css';`;
+    styleContent = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-[#0a0a0c] text-white; overflow-x: hidden; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float { animation: float 4s ease-in-out infinite; }
+`;
+    tailwindConfig = `export default { content: ["./index.php", "./src/**/*.{js,ts,jsx,tsx,isx}", "./app/**/*.{js,ts,jsx,tsx,isx}"], theme: { extend: {} }, plugins: [], }`;
+    postcssConfig = `export default { plugins: { tailwindcss: {}, autoprefixer: {}, }, }`;
+    Object.assign(pkgDevDeps, {
+      tailwindcss: "^3.3.0",
+      autoprefixer: "^10.4.0",
+      postcss: "^8.4.0",
+    });
+
+    pageIsxContent = `// ISOTOPE_DIRECTIVE
+import { proton } from '../../src/isotope';
+
+export const nucleus = proton\`
+// SERVER SIDE LOGIC
+return [
+    'nucleus' => 'ISOTOPE',
+    'isotopes' => ['PHP', 'React', 'Vite', 'Tailwind'],
+    'desc' => 'The Next-Gen Hybrid Framework'
+];
+\`;
+
+"use client";
+
+interface PageProps {
+    nucleus: string;
+    isotopes: string[];
+    desc: string;
+}
+
+export default function Page({ nucleus, isotopes, desc }: PageProps) {
+    return (
+        <div className="flex-1 flex flex-col items-center bg-[radial-gradient(circle,_#1a1a2e_0%,_#0a0a0c_100%)] text-white font-sans text-center px-4 pt-32 pb-20 overflow-x-hidden">
+            <div className="mb-16 relative mx-auto w-fit flex justify-center">
+                <div className="absolute inset-0 bg-[#00d4ff] rounded-full blur-[120px] opacity-25 scale-150 animate-pulse"></div>
+                <img src="/logo.png" className="w-64 h-auto relative z-10 drop-shadow-[0_0_50px_rgba(0,212,255,0.4)] animate-float object-contain" alt="Isotope Logo" />
+            </div>
+            
+            <h1 className="text-[#00d4ff] text-[5.5rem] font-black m-0 leading-none tracking-[15px] drop-shadow-[0_0_40px_rgba(0,212,255,0.7)] uppercase pl-[15px]">
+                {nucleus}
+            </h1>
+            <p className="text-gray-400 text-[1.4rem] mt-8 mb-16 font-medium tracking-[4px] uppercase opacity-80 max-w-3xl">
+                {desc}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl w-full mt-10">
+                <div className="p-8 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl hover:border-[#00d4ff]/50 transition-all group">
+                    <div className="text-[#00d4ff] mb-4 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.2-5.6-4.14-7.96s-9.44-2.62-11.48-.58c-2.04 2.03-.2 5.6 4.14 7.96s9.44 2.62 11.48.58z"/><path d="M15.8 4.7c-2.04-2.03-5.6-.2-7.96 4.14s-2.62 9.44-.58 11.48c2.03 2.04 5.6.2 7.96-4.14s2.62-9.44.58-11.48z"/></svg>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 uppercase tracking-wider">Atomic Logic</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">Combine PHP server logic and React UI in a single .isx file with zero friction.</p>
+                </div>
+                <div className="p-8 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl hover:border-[#00d4ff]/50 transition-all group">
+                    <div className="text-[#00d4ff] mb-4 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.71-2.13.71-2.13l-1.58-1.58s-1.29 0-2.13.71Z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2Z"/><path d="M9 12H4s.5-1 1-4c2 0 3 0 3 0"/><path d="M12 15v5s1-.5 4-1c0-2 0-3 0-3"/></svg>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 uppercase tracking-wider">Quantum Engine</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">Blazing fast Server-Side Rendering with seamless client-side hydration for instant loads.</p>
+                </div>
+                <div className="p-8 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl hover:border-[#00d4ff]/50 transition-all group">
+                    <div className="text-[#00d4ff] mb-4 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 uppercase tracking-wider">Proton Pattern</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">Reactive data sync between PHP backend and React frontend effortlessly.</p>
+                </div>
+                <div className="p-8 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl hover:border-[#00d4ff]/50 transition-all group">
+                    <div className="text-[#00d4ff] mb-4 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 uppercase tracking-wider">Vite Powered</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">Modern development experience with HMR, Tailwind CSS, and lightning fast builds.</p>
+                </div>
+            </div>
+
+            <div className="mt-20 flex gap-[15px] justify-center flex-wrap">
+                {isotopes.map(iso => (
+                    <span key={iso} className="px-5 py-[10px] border border-[#00d4ff] rounded-[30px] bg-[rgba(0,212,255,0.1)] text-[0.9rem]">
+                        {iso}
+                    </span>
+                ))}
+            </div>
+
+            <div className="mt-20 p-6 bg-black/40 border border-[#00d4ff]/20 rounded-xl backdrop-blur-md inline-flex items-center gap-4 group hover:border-[#00d4ff]/40 transition-all">
+                <span className="text-[#00d4ff] font-mono text-lg">$</span>
+                <code className="text-gray-300 font-mono text-lg">npx isotope-app create my-app</code>
+                <button className="ml-4 p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-500 hover:text-white" onClick={() => navigator.clipboard.writeText('npx isotope-app create my-app')} title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    );
+}
+`;
+  } else if (styleChoice === "scss") {
+    cssImport = `import './styles/globals.scss';`;
+    styleContent = `// Variables
+$primary: #00d4ff;
+$bg-dark: #0a0a0c;
+$bg-darker: #1a1a2e;
+$text-light: #fff;
+$text-gray: #888;
+$text-gray-dark: #666;
+
+// Reset
+* { box-sizing: border-box; }
+body { margin: 0; background: $bg-dark; color: $text-light; font-family: sans-serif; overflow-x: hidden; }
+
+// Layout Styles
+.isotope-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  
+  header {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    
+    nav {
+      max-width: 80rem;
+      margin: 0 auto;
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      
+      a.logo-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        
+        .logo-box {
+          width: 2.5rem;
+          height: 2.5rem;
+          background: rgba(0, 212, 255, 0.1);
+          border-radius: 0.75rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(0, 212, 255, 0.2);
+          transition: border-color 0.3s;
+          
+          img {
+            width: 1.75rem;
+            height: 1.75rem;
+            transition: transform 0.3s;
+          }
+        }
+        
+        span {
+          font-weight: bold;
+          color: white;
+          letter-spacing: 0.1em;
+          font-size: 1.25rem;
+          transition: color 0.3s;
+        }
+        
+        &:hover {
+          .logo-box {
+            border-color: rgba(0, 212, 255, 0.5);
+            img { transform: rotate(12deg); }
+          }
+          span { color: $primary; }
+        }
+      }
+      
+      .nav-links {
+        display: flex;
+        gap: 1.5rem;
+        margin-left: 1.5rem;
+        
+        a {
+          color: $text-gray;
+          text-decoration: none;
+          font-weight: 600;
+          text-transform: uppercase;
+          font-size: 0.875rem;
+          letter-spacing: 0.1em;
+          transition: color 0.3s;
+          
+          &:hover { color: $primary; }
+        }
+      }
+    }
+  }
+  
+  main { flex: 1; display: flex; flex-direction: column; }
+  
+  footer {
+    padding: 1rem;
+    text-align: center;
+    color: $text-gray-dark;
+    font-size: 0.875rem;
+    margin-top: 2rem;
+  }
+}
+
+// Page Styles
+.isotope-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: radial-gradient(circle, $bg-darker 0%, $bg-dark 100%);
+  padding: 8rem 1rem 5rem;
+  text-align: center;
+  
+  .hero-section {
+    margin-bottom: 4rem;
+    position: relative;
+    width: fit-content;
+    display: flex;
+    justify-content: center;
+    
+    .glow {
+      position: absolute;
+      inset: 0;
+      background: $primary;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+      transform: scale(1.5);
+      animation: pulse 2s infinite;
+    }
+    
+    .logo-main {
+      width: 16rem;
+      height: auto;
+      position: relative;
+      z-index: 10;
+      filter: drop-shadow(0 0 50px rgba(0, 212, 255, 0.4));
+      object-fit: contain;
+      animation: float 4s ease-in-out infinite;
+    }
+  }
+  
+  h1 {
+    color: $primary;
+    font-size: 5.5rem;
+    font-weight: 900;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: 0.9rem;
+    text-transform: uppercase;
+    padding-left: 0.9rem;
+    filter: drop-shadow(0 0 40px rgba(0, 212, 255, 0.7));
+  }
+  
+  p.description {
+    color: $text-gray;
+    font-size: 1.4rem;
+    margin-top: 2rem;
+    margin-bottom: 4rem;
+    font-weight: 500;
+    letter-spacing: 0.25rem;
+    text-transform: uppercase;
+    opacity: 0.8;
+    max-width: 48rem;
+  }
+  
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    max-width: 80rem;
+    width: 100%;
+    margin-top: 2.5rem;
+    
+    .feature-card {
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      backdrop-filter: blur(20px);
+      transition: all 0.3s;
+      text-align: left;
+      
+      &:hover {
+        border-color: rgba(0, 212, 255, 0.5);
+        .icon { transform: scale(1.1); }
+      }
+      
+      .icon {
+        color: $primary;
+        margin-bottom: 1rem;
+        transition: transform 0.3s;
+      }
+      
+      h3 {
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      
+      p {
+        color: #999;
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+    }
+  }
+  
+  .badge-list {
+    margin-top: 5rem;
+    display: flex;
+    gap: 0.9rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    
+    .badge {
+      padding: 0.625rem 1.25rem;
+      border: 1px solid $primary;
+      border-radius: 1.875rem;
+      background: rgba(0, 212, 255, 0.1);
+      font-size: 0.9rem;
+    }
+  }
+  
+  .command-box {
+    margin-top: 5rem;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 0.75rem;
+    backdrop-filter: blur(10px);
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s;
+    
+    &:hover { border-color: rgba(0, 212, 255, 0.4); }
+    
+    .prompt { color: $primary; font-family: monospace; font-size: 1.125rem; }
+    code { color: #ccc; font-family: monospace; font-size: 1.125rem; }
+  }
+}
+
+// About Page Styles
+.about-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: radial-gradient(circle, $bg-darker 0%, $bg-dark 100%);
+  text-align: center;
+  padding: 8rem 1rem 5rem;
+  
+  .about-hero {
+    margin-bottom: 4rem;
+    position: relative;
+    width: fit-content;
+    display: flex;
+    justify-content: center;
+    
+    .about-icon-glow {
+      position: absolute;
+      inset: 0;
+      background: $primary;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+      transform: scale(1.5);
+      animation: pulse 2s infinite;
+    }
+    
+    .about-icon-box {
+      width: 8rem;
+      height: 8rem;
+      background: rgba(0, 212, 255, 0.1);
+      border-radius: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      position: relative;
+      z-index: 10;
+      transition: transform 0.3s;
+      &:hover { transform: scale(1.05); }
+    }
+  }
+  
+  .about-title {
+    color: $primary;
+    font-size: 5.5rem;
+    font-weight: 900;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: 0.9rem;
+    filter: drop-shadow(0 0 40px rgba(0, 212, 255, 0.7));
+    text-transform: uppercase;
+    padding-left: 0.9rem;
+  }
+  
+  .about-subtitle {
+    color: $text-gray;
+    font-size: 1.4rem;
+    margin-top: 2rem;
+    margin-bottom: 4rem;
+    font-weight: 500;
+    letter-spacing: 0.25rem;
+    text-transform: uppercase;
+    opacity: 0.8;
+    max-width: 48rem;
+  }
+  
+  .about-content {
+    max-width: 56rem;
+    width: 100%;
+    padding: 2.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    backdrop-filter: blur(20px);
+    text-align: left;
+    line-height: 1.6;
+    
+    .about-section-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: $primary;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .about-description { color: $text-gray; margin-bottom: 1.5rem; font-size: 1.125rem; }
+    
+    .about-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin-top: 2.5rem;
+      
+      .about-feature-card {
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: border-color 0.3s;
+        &:hover { border-color: rgba(0, 212, 255, 0.3); }
+        
+        .about-feature-title {
+          font-weight: bold;
+          color: white;
+          margin-bottom: 0.5rem;
+          text-transform: uppercase;
+          letter-spacing: -0.025em;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .about-feature-text { color: #999; font-size: 0.875rem; }
+      }
+    }
+  }
+  
+  .about-badges {
+    margin-top: 5rem;
+    display: flex;
+    gap: 0.9rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    .about-badge {
+      padding: 0.625rem 1.25rem;
+      border: 1px solid $primary;
+      border-radius: 1.875rem;
+      background: rgba(0, 212, 255, 0.1);
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Animations
+@keyframes pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.35; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+`;
+    pkgDevDeps["sass"] = "^1.62.0";
+
+    pageIsxContent = `import { proton } from '../../src/isotope';
+
+export const nucleus = proton\`
+// SERVER SIDE LOGIC
+return [
+    'nucleus' => 'ISOTOPE',
+    'isotopes' => ['PHP', 'React', 'Vite', 'SCSS'],
+    'desc' => 'The Next-Gen Hybrid Framework'
+];
+\`;
+
+"use client";
+
+interface PageProps {
+    nucleus: string;
+    isotopes: string[];
+    desc: string;
+    _env?: { assetBase: string };
+}
+
+export default function Page({ nucleus, isotopes, desc, _env }: PageProps) {
+    return (
+        <div className="isotope-container">
+            <div className="hero-section">
+                <div className="glow"></div>
+                <img src={(_env?.assetBase || "") + "/logo.png"} className="logo-main" alt="Isotope Logo" />
+            </div>
+            
+            <h1>{nucleus}</h1>
+            <p className="description">{desc}</p>
+
+            <div className="feature-grid">
+                <div className="feature-card">
+                    <div className="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.2-5.6-4.14-7.96s-9.44-2.62-11.48-.58c-2.04 2.03-.2 5.6 4.14 7.96s9.44 2.62 11.48.58z"/><path d="M15.8 4.7c-2.04-2.03-5.6-.2-7.96 4.14s-2.62 9.44-.58 11.48c2.03 2.04 5.6.2 7.96-4.14s2.62-9.44.58-11.48z"/></svg>
+                    </div>
+                    <h3>Atomic Logic</h3>
+                    <p>Combine PHP server logic and React UI in a single .isx file with zero friction.</p>
+                </div>
+                <div className="feature-card">
+                    <div className="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.71-2.13.71-2.13l-1.58-1.58s-1.29 0-2.13.71Z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2Z"/><path d="M9 12H4s.5-1 1-4c2 0 3 0 3 0"/><path d="M12 15v5s1-.5 4-1c0-2 0-3 0-3"/></svg>
+                    </div>
+                    <h3>Quantum Engine</h3>
+                    <p>Blazing fast Server-Side Rendering with seamless client-side hydration for instant loads.</p>
+                </div>
+                <div className="feature-card">
+                    <div className="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg>
+                    </div>
+                    <h3>Proton Pattern</h3>
+                    <p>Reactive data sync between PHP backend and React frontend effortlessly.</p>
+                </div>
+                <div className="feature-card">
+                    <div className="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    </div>
+                    <h3>Vite Powered</h3>
+                    <p>Modern development experience with HMR, SCSS, and lightning fast builds.</p>
+                </div>
+            </div>
+
+            <div className="badge-list">
+                {isotopes.map(iso => (
+                    <span key={iso} className="badge">{iso}</span>
+                ))}
+            </div>
+
+            <div className="command-box">
+                <span className="prompt">$</span>
+                <code>npx isotope-app create my-app</code>
+                <button className="copy-btn" onClick={() => navigator.clipboard.writeText('npx isotope-app create my-app')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                </button>
+            </div>
+        </div>
+    );
+}
+`;
+  } else {
+    pageIsxContent = `import { proton } from '../../src/isotope';
+
+export const nucleus = proton\`
+// SERVER SIDE LOGIC
+return [
+    'nucleus' => 'ISOTOPE',
+    'isotopes' => ['PHP', 'React', 'Vite'],
+    'desc' => 'The Next-Gen Hybrid Framework'
+];
+\`;
+
+"use client";
+
+interface PageProps {
+    nucleus: string;
+    isotopes: string[];
+    desc: string;
+    _env?: { assetBase: string };
+}
+
+export default function Page({ nucleus, isotopes, desc, _env }: PageProps) {
+    return (
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'radial-gradient(circle, #1a1a2e 0%, #0a0a0c 100%)', color: 'white', fontFamily: 'sans-serif' }}>
+            <img src={(_env?.assetBase || "") + "/logo.png"} alt="Logo" style={{ width: '120px', marginBottom: '2rem', filter: 'drop-shadow(0 0 20px #00d4ff)' }} />
+            <h1 style={{ color: '#00d4ff', fontSize: '3rem', fontWeight: 'bold', margin: '0' }}>{nucleus} ISOTOPE</h1>
+            <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '2.5rem' }}>{desc}</p>
+            <div style={{ display: 'flex', gap: '15px' }}>
+                {isotopes.map(iso => (
+                    <span key={iso} style={{ padding: '10px 20px', border: '1px solid #00d4ff', borderRadius: '30px', background: 'rgba(0,212,255,0.1)', fontSize: '0.9rem' }}>
+                        {iso}
+                    </span>
+                ))}
+            </div>
+
+            <div style={{ marginTop: '3rem', padding: '1rem 1.5rem', border: '1px solid rgba(0,212,255,0.2)', borderRadius: '12px', background: 'rgba(0,0,0,0.3)', display: 'inline-flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ color: '#00d4ff', fontFamily: 'monospace' }}>$</span>
+                <code style={{ fontSize: '1rem', color: '#ccc', fontFamily: 'monospace' }}>npx isotope-app create my-app</code>
+            </div>
+        </div>
+    );
+}`;
+  }
+
+  // 2. README.md
+  fs.writeFileSync(
+    path.join(root, "README.md"),
+    `<div align="center">
+
+<img src="public/logo.png" alt="Isotope Logo" width="200">
+
+# Isotope: Atomic Fusion
+
+[![npm version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://www.npmjs.com/package/create-isotope-app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/atoms-gaming/isotope)
+[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.0-777bb4.svg)](https://www.php.net/)
+
+**Isotope** is a unified PHP & React hybrid framework designed by **ATOMS GAMING**.  
+It transforms the constraints of shared hosting into a modern development field.
+
+</div>
+
+---
+
+## ⚛️ Getting Started
+
+### 1. Start Development
+
+\`\`\`bash
+npm run dev
+\`\`\`
+
+This starts the **Proton (PHP Nucleus)** on port 8000 and the **Electron (Vite)** on port 5173.
+
+### 2. File Structure
+
+- \`app/\`: Contains your Atomic Components (\`.isx\`).
+- \`core/\`: Framework kernel.
+- \`src/\`: Frontend entry points.
+
+## 🛠 Atomic Fusion (.isx)
+
+Write PHP and React in a single file!
+
+\`\`\`tsx
+import { proton } from '../../src/isotope';
+
+export const nucleus = proton\`
+// SERVER SIDE LOGIC
+return ['message' => 'Hello from Quantum SSR'];
+\`;
+
+// "use client"; // Add this for Client Components (CSR)
+
+export default function Page({ message }) {
+    return <h1>{message}</h1>;
+}
+\`\`\`
+
+### ⚛️ Quantum Fusion (SSR/CSR)
+- **Server Components (Default)**: Rendered by PHP. Zero JS overhead.
+- **Client Components**: Interactive UI using React hydration.
+
+---
+
+<div align="center">
+Produced by <strong>ATOMS GAMING</strong>
+</div>
+`,
+  );
+
+  // 3. Isotope Kernel (PHP)
+  const kernelPhp = `<?php
+namespace Isotope;
+
+class Kernel {
+    public static function boot() {
+        // Serve static files from public/ during development
+        $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        if ($uri !== '/' && file_exists(__DIR__ . '/../public' . $uri)) {
+            $ext = pathinfo($uri, PATHINFO_EXTENSION);
+            $mimes = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'svg' => 'image/svg+xml'];
+            if (isset($mimes[$ext])) header('Content-Type: ' . $mimes[$ext]);
+            readfile(__DIR__ . '/../public' . $uri);
+            exit;
+        }
+
+        $isDev = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], ':8000') !== false);
+        $route = ($uri === '/' || $uri === '/index.php') ? '/home' : rtrim($uri, '/');
+        
+        // Middleware Support
+        if (file_exists(__DIR__ . "/../app/middleware.php")) {
+            $middleware = include __DIR__ . "/../app/middleware.php";
+            if (is_callable($middleware)) $middleware();
+        }
+
+        $path = __DIR__ . "/../app" . $route;
+        $isx = $path . "/page.isx";
+        
+        $data = ['nucleus' => '404', 'isotopes' => [], 'desc' => 'Page Not Found'];
+        $pageHtml = "";
+        $isClient = false;
+
+        if (file_exists($isx)) {
+            $content = file_get_contents($isx);
+            
+            // Directive Detection (Improved regex to ignore comments)
+            $cleanContent = preg_replace('#/\\\\*\\\\s*[\\\\s\\\\S]*?\\\\s*\\\\*\\\\/|(?<!:)\\\\/\\\\/.*#', '', $content);
+            $isClient = preg_match('#^\\\\s*["\\\\\\\\x27]use client["\\\\\\\\x27]#', $cleanContent);
+
+            $phpCode = null;
+            if (preg_match('/<\\\\?php([\\\\s\\\\S]*?)\\\\?>/', $content, $matches)) {
+                $phpCode = $matches[1];
+            } elseif (preg_match('/proton\`([\\\\s\\\\S]*?)\`/', $content, $matches)) {
+                $phpCode = $matches[1];
+            }
+
+            if ($phpCode) {
+                // Temporary file to avoid eval() for better include behavior
+                $tmp = tempnam(sys_get_temp_dir(), 'isx');
+                file_put_contents($tmp, "<?php " . $phpCode);
+                $res = include $tmp;
+                if (is_array($res)) $data = $res;
+                unlink($tmp);
+            }
+
+            // Quantum Engine: Server-Side JSX Rendering (for Non-Client Components)
+            if (!$isClient) {
+                if (preg_match('#export default function [^\\\\(]+\\\\(([^)]*)\\\\)[\\\\s\\\\S]*?return\\\\s*\\\\(([\\\\s\\\\S]*?)\\\\)[\\\\s;]*$#m', $content, $matches)) {
+                    $jsx = $matches[2]; // Fixed: matches[2] is JSX, matches[1] is props
+                    $pageHtml = self::renderJSX($jsx, $data);
+                }
+            }
+        } elseif (file_exists($path . "/page.php")) {
+            $data = include $path . "/page.php";
+        }
+        
+        // SPA Handling: Return JSON if requested
+        if (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json')) {
+            header('Content-Type: application/json');
+            if (!$isClient) { $data["_pageHtml"] = $pageHtml; }
+            echo json_encode($data);
+            exit;
+        }
+
+        // Layout Data Merging (Always SSR if possible)
+        if (file_exists(__DIR__ . "/../app/layouts/layout.isx")) {
+            $lContent = file_get_contents(__DIR__ . "/../app/layouts/layout.isx");
+            $lPhpCode = null;
+            if (preg_match('/proton\\\\\\\\\\\`([\\\\s\\\\S]*?)\\\\\\\\\\\`/', $lContent, $matches)) {
+                $lPhpCode = $matches[1];
+            }
+            if ($lPhpCode) {
+                $tmp = tempnam(sys_get_temp_dir(), 'isx_l');
+                file_put_contents($tmp, "<?php " . $lPhpCode);
+                $layoutData = include $tmp;
+                unlink($tmp);
+                if (is_array($layoutData)) $data = array_merge($layoutData, $data);
+            }
+            // 3. Layout Integration
+            $pageHtml = "";
+            if (preg_match('#export default function [^\\\\\\\\(]+\\\\\\\\([^)]*\\\\\\\\)[\\\\s\\\\S]*?return\\\\s*\\\\(([\\\\s\\\\S]*)\\\\)[\\\\s;]*$#m', $content, $matches)) {
+                $pageHtml = self::renderJSX($matches[1], $data);
+            }
+
+            $pageHtml = $pageHtml;
+        }
+
+        // Final SSR Assembly
+        // Passing $pageHtml (unwrapped) to proxy to avoid double header in client hydration
+        $data["_pageHtml"] = $pageHtml; 
+        $elementPath = "app" . $route . "/page.isx";
+        include __DIR__ . "/nucleus.php";
+    }
+
+    public static function renderJSX($jsx, $data) {
+        $html = $jsx;
+        
+        // 1. Map replacement (Loop)
+        $html = preg_replace_callback(\'#\\\\{([^}.]+)\\\\.map\\\\((?P<args>[^\\\\s=>]+)\\\\s*=>\\\\s*\\\\((?P<tpl>[\\\\s\\\\S]+?)\\\\)\\\\)\\\\}#\', function($m) use ($data) {
+            $listKey = trim($m[1]);
+            $itemVar = trim($m[\'args\'], \'() \');
+            $itemTpl = $m[\'tpl\'];
+            $replacement = "";
+            if (isset($data[$listKey]) && is_array($data[$listKey])) {
+                foreach ($data[$listKey] as $item) {
+                    $replacement .= preg_replace(\'/\\\\{\\\\s*\' . preg_quote($itemVar, \'/\') . \'\\\\s*\\\\}/i\', (string)$item, $itemTpl);
+                }
+            }
+            return $replacement;
+        }, $html);
+
+        // 2. Props replacement (Variables)
+        foreach ($data as $key => $val) {
+            if (is_string($val) || is_numeric($val)) {
+                $html = preg_replace(\'/\\\\{\\\\s*\' . preg_quote($key, \'/\') . \'\\\\s*\\\\}/i\', (string)$val, $html);
+            }
+        }
+
+        $html = preg_replace(\'#className=#i\', \'class=\', $html);
+        $html = preg_replace(\'#/\\\\*\\\\s*[\\\\s\\\\S]*?\\\\s*\\\\*\\\\/|(?<!:)\\\\/\\\\/.*#\', \'\', $html);
+        $html = preg_replace(\'#onClick=\\\\{.*?\\\\}|onChange=\\\\{.*?\\\\}|onSubmit=\\\\{.*?\\\\}#i\', \'\', $html);
+
+        return $html;
+    }
+}
+`;
+  fs.writeFileSync(path.join(root, "core/Kernel.php"), kernelPhp);
+
+  // 4. Nucleus (HTML Shell)
+  const nucleusPhp = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $data['_meta']['title'] ?? 'Isotope App'; ?></title>
+    <?php if (isset($data['_meta']['description'])): ?>
+    <meta name="description" content="<?php echo $data['_meta']['description']; ?>">
+    <?php endif; ?>
+    
+    <?php
+    $isDev = false;
+    $fp = @fsockopen('localhost', 5173, $errno, $errstr, 0.1);
+    if ($fp) {
+        $isDev = true;
+        fclose($fp);
+    }
+
+    if ($isDev): 
+        // Auto-detect CSS or SCSS
+        $cssFile = file_exists(__DIR__ . '/../src/styles/globals.scss') ? 'globals.scss' : 'globals.css';
+    ?>
+        <link rel="stylesheet" href="http://localhost:5173/src/styles/<?php echo $cssFile; ?>">
+        <script type="module">
+            import RefreshRuntime from 'http://localhost:5173/@react-refresh'
+            RefreshRuntime.injectIntoGlobalHook(window)
+            window.$RefreshReg$ = () => {}
+            window.$RefreshSig$ = () => (type) => type
+            window.__vite_plugin_react_preamble_installed__ = true
+        </script>
+        <script type="module" src="http://localhost:5173/@vite/client"></script>
+        <script type="module" src="http://localhost:5173/src/main.tsx"></script>
+    <?php else: 
+        $manifestFile = __DIR__ . '/../public/dist/.vite/manifest.json';
+        if (!file_exists($manifestFile)) $manifestFile = __DIR__ . '/../public/dist/manifest.json';
+        $manifest = json_decode(file_get_contents($manifestFile), true);
+        $entry = $manifest['src/main.tsx'];
+        ?>
+        <link rel="stylesheet" href="/dist/<?php echo $entry['css'][0]; ?>">
+        <script type="module" src="/dist/<?php echo $entry['file']; ?>"></script>
+    <?php endif; ?>
+</head>
+<body>
+    <div id="isotope-nucleus" data-proton='<?php echo json_encode($data, JSON_HEX_QUOT | JSON_HEX_APOS); ?>' data-electron="<?php echo $elementPath; ?>">
+        <?php echo $pageHtml; ?>
+    </div>
+</body>
+</html>`;
+  fs.writeFileSync(path.join(root, "core/nucleus.php"), nucleusPhp);
+
+  // 5. TSConfig 生成 (これで警告が消えます)
+  const tsConfig = {
+    compilerOptions: {
+      target: "ESNext",
+      lib: ["DOM", "DOM.Iterable", "ESNext"],
+      allowJs: true,
+      skipLibCheck: true,
+      esModuleInterop: true,
+      allowSyntheticDefaultImports: true,
+      strict: true,
+      forceConsistentCasingInFileNames: true,
+      module: "ESNext",
+      moduleResolution: "Node",
+      resolveJsonModule: true,
+      isolatedModules: true,
+      noEmit: true,
+      jsx: "react-jsx",
+      types: ["vite/client", "node"],
+    },
+    include: ["src", "app"],
+  };
+  fs.writeFileSync(
+    path.join(root, "tsconfig.json"),
+    JSON.stringify(tsConfig, null, 2),
+  );
+
+  // 8. Create Layout
+  let layoutIsx;
+  if (styleChoice === "scss") {
+    layoutIsx = `import { proton } from '../../src/isotope';
+
+export const layoutData = proton\`
+return [];
+\`;
+
+"use client";
+import * as React from 'react';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="isotope-layout">
+            <header>
+                <nav>
+                    <a href="/" className="logo-link">
+                        <div className="logo-box">
+                            <img src="/logo.png" alt="Logo" />
+                        </div>
+                        <span>ISOTOPE</span>
+                    </a>
+                    <div className="nav-links">
+                        <a href="/">Home</a>
+                        <a href="/about">About</a>
+                    </div>
+                </nav>
+            </header>
+            <main>
+                {children}
+            </main>
+            <footer>
+                &copy; ${new Date().getFullYear()} Isotope Framework
+            </footer>
+        </div>
+    );
+}`;
+  } else {
+    layoutIsx = `import { proton } from '../../src/isotope';
+
+export const layoutData = proton\`
+return [];
+\`;
+
+"use client";
+import * as React from 'react';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="isotope-layout">
+            <header className="p-4 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-50">
+                <nav className="max-w-7xl mx-auto flex gap-6 items-center">
+                    <a href="/" className="flex items-center gap-3 group">
+                        <div className="w-10 h-10 bg-[#00d4ff]/10 rounded-xl flex items-center justify-center border border-[#00d4ff]/20 group-hover:border-[#00d4ff]/50 transition-colors">
+                            <img src="/logo.png" className="w-7 h-7 transition-transform group-hover:rotate-12" alt="Logo" />
+                        </div>
+                        <span className="font-bold text-white tracking-widest text-xl group-hover:text-[#00d4ff] transition-colors">ISOTOPE</span>
+                    </a>
+                    <div className="flex gap-6 ml-6">
+                        <a href="/" className="text-gray-400 hover:text-[#00d4ff] transition-colors font-semibold uppercase text-sm tracking-widest">Home</a>
+                        <a href="/about" className="text-gray-400 hover:text-[#00d4ff] transition-colors font-semibold uppercase text-sm tracking-widest">About</a>
+                    </div>
+                </nav>
+            </header>
+            <main>
+                {children}
+            </main>
+            <footer className="p-4 text-center text-gray-600 text-sm mt-8">
+                &copy; ${new Date().getFullYear()} Isotope Framework
+            </footer>
+        </div>
+    );
+}`;
+  }
+  fs.ensureDirSync(path.join(root, "app/layouts"));
+  fs.writeFileSync(path.join(root, "app/layouts/layout.isx"), layoutIsx);
+
+  // 9. VS Code Settings
+  const vscodeSettings = {
+    "files.associations": {
+      "*.isx": "typescriptreact",
+    },
+  };
+  fs.ensureDirSync(path.join(root, ".vscode"));
+  fs.writeFileSync(
+    path.join(root, ".vscode/settings.json"),
+    JSON.stringify(vscodeSettings, null, 2),
+  );
+
+  // 10. React Main
+  const mainTsx = `import React from 'react';
+import ReactDOM from 'react-dom/client';
+${cssImport}
+
+const IsotopeApp = () => {
+    const nucleus = document.getElementById('isotope-nucleus');
+    const initialProtonData = nucleus?.dataset.proton ? JSON.parse(nucleus.dataset.proton) : {};
+    const initialElectronPath = nucleus?.dataset.electron || 'home';
+    const envData = initialProtonData._env || {};
+
+    const [route, setRoute] = React.useState({
+        protonData: initialProtonData,
+        electronPath: initialElectronPath,
+        path: window.location.pathname
+    });
+
+    const resolveElement = async (electronPath: string) => {
+        const components = import.meta.glob(['../app/**/page.isx', '../app/layouts/layout.isx']);
+        const pageLoader = components['../' + electronPath];
+        if (!pageLoader) return () => <div style={{color: 'red'}}>Atomic Element Not Found</div>;
+        const PageMod = await pageLoader() as any;
+        const Page = PageMod.default;
+
+        const layoutLoader = components['../app/layouts/layout.isx'];
+        if (layoutLoader) {
+            const LayoutMod = await layoutLoader() as any;
+            const Layout = LayoutMod.default;
+            return (props: any) => (
+                <Layout {...props}>
+                    <Page {...props} />
+                </Layout>
+            );
+        }
+        return Page;
+    };
+
+    const [Element, setElement] = React.useState<React.ComponentType | null>(null);
+
+    React.useEffect(() => {
+        resolveElement(route.electronPath).then(Comp => setElement(() => Comp));
+    }, [route.electronPath]);
+
+    const navigate = async (to: string) => {
+        const response = await fetch(to, { headers: { 'Accept': 'application/json' } });
+        if (response.ok) {
+            const protonData = await response.json();
+            if (envData) protonData._env = envData;
+            
+            const electronPath = "app" + (to === '/' || to === '' ? '/home' : to) + "/page.isx";
+            window.history.pushState({}, '', to);
+            setRoute({ protonData, electronPath, path: to });
+        }
+    };
+
+    (window as any).isotopeNavigate = navigate;
+
+    if (!Element) return null;
+    return <Element {...route.protonData} />;
+};
+
+const nucleus = document.getElementById('isotope-nucleus');
+if (nucleus) {
+    ReactDOM.createRoot(nucleus).render(<IsotopeApp />);
+}`;
+  fs.writeFileSync(path.join(root, "src/main.tsx"), mainTsx);
+
+  // 7. Isotope Splitter (Vite Plugin)
+  const splitterTs = `import { Plugin, transformWithEsbuild } from 'vite';
+import fs from 'fs';
+
+export default function isotopeSplitter(): Plugin {
+  return {
+    name: 'isotope-splitter',
+    enforce: 'pre',
+    async transform(code, id) {
+      const [path] = id.split('?');
+      if (path.endsWith('.isx')) {
+          const isClient = /['"]use client['"]/.test(code.replace(/\\/\\*\\s*[\\s\\S]*?\\s*\\*\\/|\\/\\/.*/g, ''));
+          if (!isClient) {
+              const stubCode = 'import React from "react"; export default function SC(props) { return <div dangerouslySetInnerHTML={{ __html: props._pageHtml }} style={{ display: "contents" }} />; }';
+              return transformWithEsbuild(stubCode, id, {
+                loader: 'tsx',
+                jsx: 'automatic',
+              });
+          }
+          const cleanedCode = code
+              .replace(/<\\?php[\\s\\S]*?\\?>/g, '')
+              .replace(/proton\\\`[\\s\\S]*?\\\`/g, 'null');
+          
+          return transformWithEsbuild(cleanedCode, id, {
+            loader: 'tsx',
+            jsx: 'automatic',
+          });
+      }
+      return null;
+    },
+    handleHotUpdate({ file, server }) {
+      if (file.split('?')[0].endsWith('.isx')) {
+        const mod = server.moduleGraph.getModuleById(file);
+        if (mod) {
+          server.moduleGraph.invalidateModule(mod);
+          return [mod];
+        }
+      }
+    }
+  };
+}
+`;
+  fs.writeFileSync(path.join(root, "src/isotope-splitter.ts"), splitterTs);
+  // 3.1 Bridge (Atomic Actions)
+  const bridgePhp = `<?php
+header('Content-Type: application/json');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    $action = $input['action'] ?? null;
+    $params = $input['params'] ?? [];
+    
+    if ($action && is_callable($action)) {
+        $result = $action(...$params);
+        echo json_encode(['success' => true, 'data' => $result]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Action not found']);
+    }
+    exit;
+}`;
+  fs.writeFileSync(path.join(root, "core/Bridge.php"), bridgePhp);
+  // 3.2 Image Optimizer
+  const optimizerPhp = `<?php
+$src = $_GET['src'] ?? null;
+$width = $_GET['w'] ?? null;
+$quality = $_GET['q'] ?? 80;
+
+if (!$src || !file_exists(__DIR__ . '/../public/' . $src)) {
+    http_response_code(404);
+    exit;
+}
+
+$file = __DIR__ . '/../public/' . $src;
+$info = getimagesize($file);
+$mime = $info['mime'];
+
+header("Content-Type: $mime");
+
+if (!$width) {
+    readfile($file);
+    exit;
+}
+
+// Simple GD resizing
+$img = null;
+switch ($mime) {
+    case 'image/jpeg': $img = imagecreatefromjpeg($file); break;
+    case 'image/png':  $img = imagecreatefrompng($file);  break;
+    case 'image/webp': $img = imagecreatefromwebp($file); break;
+}
+
+if ($img) {
+    $origW = imagesx($img);
+    $origH = imagesy($img);
+    $height = ($origH / $origW) * $width;
+    $tmp = imagecreatetruecolor($width, $height);
+    
+    if ($mime === 'image/png' || $mime === 'image/webp') {
+        imagealphablending($tmp, false);
+        imagesavealpha($tmp, true);
+    }
+    
+    imagecopyresampled($tmp, $img, 0, 0, 0, 0, $width, $height, $origW, $origH);
+    
+    switch ($mime) {
+        case 'image/jpeg': imagejpeg($tmp, null, $quality); break;
+        case 'image/png':  imagepng($tmp); break;
+        case 'image/webp': imagewebp($tmp, null, $quality); break;
+    }
+    imagedestroy($tmp);
+    imagedestroy($img);
+}`;
+  fs.writeFileSync(path.join(root, "core/optimizer.php"), optimizerPhp);
+
+  const linkTsx = `import React from 'react';
+
+export default function Link({ to, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) {
+    const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if ((window as any).isotopeNavigate) {
+            (window as any).isotopeNavigate(to);
+        } else {
+            window.location.href = to;
+        }
+    };
+    return <a href={to} onClick={handleClick} {...props}>{children}</a>;
+}`;
+  fs.writeFileSync(path.join(root, "src/components/Link.tsx"), linkTsx);
+
+  // 8. ページコンテンツ
+  fs.writeFileSync(
+    path.join(root, "app/home/page.isx"),
+    pageIsxContent.replace("// ISOTOPE_DIRECTIVE", ""),
+  );
+
+  let aboutIsxContent;
+  if (styleChoice === "scss") {
+    aboutIsxContent = `"use client";
+import { proton } from '../../src/isotope';
+
+export const nucleus = proton\`
+// SERVER SIDE LOGIC
+return [
+    'nucleus' => 'ABOUT',
+    'isotopes' => ['PHP', 'React', 'Vite', 'SCSS'],
+    'desc' => 'Next-gen Hybrid Infrastructure'
+];
+\`;
+
+interface PageProps {
+    nucleus: string;
+    isotopes: string[];
+    desc: string;
+}
+
+export default function Page({ nucleus, isotopes, desc }: PageProps) {
+  return (
+    <div className="about-page">
+      <div className="about-hero">
+        <div className="about-icon-glow"></div>
+        <div className="about-icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </div>
+      </div>
+
+      <h1 className="about-title">{nucleus}</h1>
+      <p className="about-subtitle">{desc}</p>
+
+      <div className="about-content">
+        <h2 className="about-section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Protocol Intelligence
+        </h2>
+        <p className="about-description">
+          Isotope represents the next evolution in hybrid infrastructure. By merging the reliability of PHP with the 
+          reactive power of React, we've created a framework that transcends traditional boundaries.
+        </p>
+        <div className="about-features">
+          <div className="about-feature-card">
+            <h4 className="about-feature-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              Server Nucleus
+            </h4>
+            <p className="about-feature-text">Secure, mature logic powered by PHP 8+ with direct database access.</p>
+          </div>
+          <div className="about-feature-card">
+            <h4 className="about-feature-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Client Electron
+            </h4>
+            <p className="about-feature-text">Dynamic, fluid interfaces powered by React and Vite with HMR.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="about-badges">
+        {isotopes.map((iso) => (
+          <span key={iso} className="about-badge">{iso}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+`;
+  } else {
+    aboutIsxContent = `"use client";
+import { proton } from '../../src/isotope';
+
+export const nucleus = proton\`
+// SERVER SIDE LOGIC
+return [
+    'nucleus' => 'ABOUT',
+    'isotopes' => ['PHP', 'React', 'Vite'${styleChoice !== "none" ? `, '${styleChoice.toUpperCase()}'` : ""}],
+    'desc' => 'Next-gen Hybrid Infrastructure'
+];
+\`;
+
+interface PageProps {
+    nucleus: string;
+    isotopes: string[];
+    desc: string;
+}
+
+export default function Page({ nucleus, isotopes, desc }: PageProps) {
+  return (
+    <div className="flex-1 flex flex-col items-center bg-[radial-gradient(circle,_#1a1a2e_0%,_#0a0a0c_100%)] text-white font-sans text-center px-4 pt-32 pb-20 overflow-x-hidden">
+      <div className="mb-16 relative mx-auto w-fit flex justify-center">
+        <div className="absolute inset-0 bg-[#00d4ff] rounded-full blur-[120px] opacity-25 scale-150 animate-pulse"></div>
+        <div className="w-32 h-32 bg-[#00d4ff]/10 rounded-3xl flex items-center justify-center border border-[#00d4ff]/20 animate-float relative z-10 transition-transform hover:scale-105">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </div>
+      </div>
+
+      <h1 className="text-[#00d4ff] text-[5.5rem] font-black m-0 leading-none tracking-[15px] drop-shadow-[0_0_40px_rgba(0,212,255,0.7)] uppercase pl-[15px]">
+        {nucleus}
+      </h1>
+      <p className="text-gray-400 text-[1.4rem] mt-8 mb-16 font-medium tracking-[4px] uppercase opacity-80 max-w-3xl">
+        {desc}
+      </p>
+
+      <div className="max-w-4xl w-full p-10 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl text-left leading-relaxed">
+        <h2 className="text-2xl font-bold mb-6 text-[#00d4ff] uppercase tracking-widest flex items-center gap-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Protocol Intelligence
+        </h2>
+        <p className="text-gray-400 mb-6 text-lg">
+          Isotope represents the next evolution in hybrid infrastructure. By merging the reliability of PHP with the 
+          reactive power of React, we've created a framework that transcends traditional boundaries.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-[#00d4ff]/30 transition-colors">
+            <h4 className="font-bold text-white mb-2 uppercase tracking-tighter flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              Server Nucleus
+            </h4>
+            <p className="text-gray-500 text-sm">Secure, mature logic powered by PHP 8+ with direct database access.</p>
+          </div>
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-[#00d4ff]/30 transition-colors">
+            <h4 className="font-bold text-white mb-2 uppercase tracking-tighter flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Client Electron
+            </h4>
+            <p className="text-gray-500 text-sm">Dynamic, fluid interfaces powered by React and Vite with HMR.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-20 flex gap-[15px] justify-center flex-wrap">
+        {isotopes.map((iso) => (
+          <span
+            key={iso}
+            className="px-5 py-[10px] border border-[#00d4ff] rounded-[30px] bg-[rgba(0,212,255,0.1)] text-[0.9rem]"
+          >
+            {iso}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+`;
+  }
+
+  fs.writeFileSync(path.join(root, "app/about/page.isx"), aboutIsxContent);
+
+  // 9. 設定ファイル
+  fs.writeFileSync(
+    path.join(
+      root,
+      `src/styles/globals.${styleChoice === "scss" ? "scss" : "css"}`,
+    ),
+    styleContent,
+  );
+  if (tailwindConfig)
+    fs.writeFileSync(path.join(root, "tailwind.config.js"), tailwindConfig);
+  if (postcssConfig)
+    fs.writeFileSync(path.join(root, "postcss.config.js"), postcssConfig);
+
+  const viteConfig = `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import isotopeSplitter from './src/isotope-splitter';
+
+export default defineConfig({
+  plugins: [isotopeSplitter(), react({ include: /\\.(isx|tsx?|jsx?)$/ })],
+  server: { cors: true, port: 5173, strictPort: true },
+  optimizeDeps: {
+    extensions: ['.isx'],
+    esbuildOptions: {
+      loader: {
+        '.isx': 'tsx',
+      },
+    },
+  },
+  build: {
+    outDir: 'public/dist',
+    manifest: true,
+    rollupOptions: {
+      input: 'src/main.tsx',
+      output: {
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]'
+      }
+    }
+  }
+});`;
+  fs.writeFileSync(path.join(root, "vite.config.ts"), viteConfig);
+
+  fs.writeFileSync(
+    path.join(root, "index.php"),
+    `<?php require_once 'core/Kernel.php'; Isotope\\Kernel::boot();`,
+  );
+
+  // 9. ロゴコピー
+  const logoSrc = path.join(__dirname, "templates", "logo.png");
+  if (fs.existsSync(logoSrc)) {
+    fs.copySync(logoSrc, path.join(root, "public/logo.png"));
+  }
+
+  // 10. package.json & npm i
+  const pkg = {
+    name: projectName,
+    version: "1.0.0",
+    type: "module",
+    scripts: { dev: 'concurrently "vite" "php -S localhost:8000 index.php"' },
+    dependencies: pkgDeps,
+    devDependencies: pkgDevDeps,
+  };
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify(pkg, null, 2),
+  );
+
+  console.log(chalk.yellow(`\n📦 Installing dependencies...`));
+  try {
+    execSync(`npm install`, { cwd: root, stdio: "inherit" });
+    console.log(chalk.green(`\n🚀 Ready! cd ${projectName} && npm run dev`));
+  } catch (err) {
+    console.log(chalk.red(`\n❌ Install failed.`));
+  }
+}
+
+init();

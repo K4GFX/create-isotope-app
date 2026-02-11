@@ -1,0 +1,28 @@
+import React from 'react';
+
+/**
+ * app/layout.tsx
+ * 
+ * すべてのページをラップする共通レイアウトコンポーネントです。
+ * Proton (PHP) から渡されたデータも props として受け取れます。
+ */
+export default function Layout({ children, nucleus }) {
+    return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <header style={{ padding: '1rem', borderBottom: '1px solid #333' }}>
+                <h1>Isotope App - {nucleus}</h1>
+                <nav>
+                    <a href="/">Home</a> | <a href="/about">About</a>
+                </nav>
+            </header>
+
+            <main style={{ flex: 1, padding: '2rem' }}>
+                {children}
+            </main>
+
+            <footer style={{ padding: '1rem', borderTop: '1px solid #333', textAlign: 'center' }}>
+                &copy; 2026 ATOMS GAMING
+            </footer>
+        </div>
+    );
+}

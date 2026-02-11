@@ -1,0 +1,26 @@
+# Dependency directories
+node_modules/
+vendor/
+
+# Environment variables (絶対に公開してはいけない)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
+.cache/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# PHP specific
+composer.lock

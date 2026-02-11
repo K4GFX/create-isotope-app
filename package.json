@@ -1,0 +1,38 @@
+{
+  "name": "create-isotope-app",
+  "version": "1.0.0",
+  "description": "Atomic-based PHP & React hybrid framework for ATOMS GAMING",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "create-isotope-app": "index.js"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/K4GFX/create-isotope-app.git"
+  },
+  "keywords": [
+    "php",
+    "react",
+    "framework",
+    "isotope",
+    "atoms-gaming"
+  ],
+  "author": "ATOMS GAMING / K4GFX",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "fs-extra": "^11.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "vite": "^7.3.1"
+  }
+}
