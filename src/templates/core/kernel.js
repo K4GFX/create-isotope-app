@@ -3,6 +3,8 @@ namespace Isotope;
 
 class Kernel {
     public static function boot() {
+        self::loadEnv();
+
         // Serve static files from public/ during development
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         if ($uri !== '/' && file_exists(__DIR__ . '/../public' . $uri)) {
@@ -93,6 +95,24 @@ class Kernel {
         $data["_pageHtml"] = $pageHtml; 
         $elementPath = "app" . $route . "/page.isx";
         include __DIR__ . "/nucleus.php";
+    }
+
+    public static function loadEnv() {
+        $envPath = __DIR__ . '/../.env';
+        if (file_exists($envPath)) {
+            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '#') === 0) continue;
+                list($name, $value) = explode('=', $line, 2);
+                $name = trim($name);
+                $value = trim($value);
+                if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
+                    putenv(sprintf('%s=%s', $name, $value));
+                    $_ENV[$name] = $value;
+                    $_SERVER[$name] = $value;
+                }
+            }
+        }
     }
 
     public static function renderJSX($jsx, $data) {

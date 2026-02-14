@@ -15,8 +15,10 @@ const __dirname = path.dirname(__filename);
 // テンプレートのインポート
 import { kernelPhp } from "./src/templates/core/kernel.js";
 import { nucleusPhp } from "./src/templates/core/nucleus.js";
+import { databasePhp } from "./src/templates/core/database.js";
 import { bridgePhp, optimizerPhp } from "./src/templates/core/utils.js";
 import { homePageIsx, aboutPageIsx } from "./src/templates/pages/pages.js";
+import { postsPageIsx } from "./src/templates/pages/posts.js";
 import { linkTsx } from "./src/templates/pages/components.js";
 import { layoutIsx } from "./src/templates/layouts/layout.js";
 import { tailwindStyles, scssStyles } from "./src/templates/styles/styles.js";
@@ -30,6 +32,8 @@ import {
 } from "./src/templates/configs/configs.js";
 import { splitterTs } from "./src/templates/configs/splitter.js";
 import { readmeMd } from "./src/templates/configs/readme.js";
+import { envExample } from "./src/templates/configs/env.js";
+import { htaccess } from "./src/templates/configs/server.js";
 import {
   extensionPackageJson,
   extensionGrammarJson,
@@ -93,6 +97,7 @@ async function init() {
   const dirs = [
     "app/home",
     "app/about",
+    "app/posts",
     "app/layouts",
     "core",
     "public/dist",
@@ -145,12 +150,18 @@ async function init() {
   // コアファイル
   fs.writeFileSync(path.join(root, "core/Kernel.php"), kernelPhp(styleChoice));
   fs.writeFileSync(path.join(root, "core/nucleus.php"), nucleusPhp());
+  fs.writeFileSync(path.join(root, "core/Database.php"), databasePhp());
   fs.writeFileSync(path.join(root, "core/Bridge.php"), bridgePhp());
   fs.writeFileSync(path.join(root, "core/optimizer.php"), optimizerPhp());
   fs.writeFileSync(
     path.join(root, "index.php"),
     `<?php require_once 'core/Kernel.php'; Isotope\\Kernel::boot();`,
   );
+
+  // 環境変数設定
+  fs.writeFileSync(path.join(root, ".env"), envExample());
+  fs.writeFileSync(path.join(root, ".env.example"), envExample());
+  fs.writeFileSync(path.join(root, ".htaccess"), htaccess());
 
   // 設定・ビルドツール
   fs.writeFileSync(
@@ -208,6 +219,10 @@ async function init() {
   fs.writeFileSync(
     path.join(root, "app/about/page.isx"),
     aboutPageIsx(styleChoice),
+  );
+  fs.writeFileSync(
+    path.join(root, "app/posts/page.isx"),
+    postsPageIsx(styleChoice),
   );
 
   // ロゴ & 拡張機能アイコン

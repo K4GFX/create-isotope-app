@@ -58,7 +58,34 @@ export default function Nav() {
 }
 ```
 
-## 4. Atomic Actions (Bridge)
+## 4. 環境変数 (.env)
+
+Isotope はプロジェクトルートの `.env` ファイルを自動的に読み込みます。
+PHP 側では `$_ENV['KEY_NAME']` または `getenv('KEY_NAME')` でアクセス可能です。
+
+```env
+DB_HOST=localhost
+DB_NAME=my_database
+```
+
+## 5. データベース操作 (Database)
+
+`core/Database.php` を使用して、PDO によるデータベース操作が可能です。
+
+```php
+// データの取得 (Read)
+$users = \\Isotope\\Database::query("SELECT * FROM users")->fetchAll();
+
+// データの追加 (Create)
+\\Isotope\\Database::query("INSERT INTO users (name) VALUES (?)", [$name]);
+```
+
+## 6. CRUD サンプル (/posts)
+
+新規プロジェクトには `/posts` パスに CRUD のサンプルコードが含まれています。
+`app/posts/page.isx` を参照して、データの取得とフォーム送信の実装方法を確認してください。
+
+## 7. Atomic Actions (Bridge)
 
 `core/Bridge.php` を使用して、APIを作成せずに PHP の関数を呼び出せます。
 (※現在は POST リクエストを受け取り、サーバーサイドで指定されたアクションを実行するプロトタイプとして組み込まれています)
