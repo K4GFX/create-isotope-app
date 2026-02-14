@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" alt="Isotope Logo" width="200">
+<img src="https://raw.githubusercontent.com/K4GFX/create-isotope-app/main/templates/logo.png" alt="Isotope Logo" width="200">
 
 # Isotope Framework
 

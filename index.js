@@ -30,6 +30,11 @@ import {
 } from "./src/templates/configs/configs.js";
 import { splitterTs } from "./src/templates/configs/splitter.js";
 import { readmeMd } from "./src/templates/configs/readme.js";
+import {
+  extensionPackageJson,
+  extensionGrammarJson,
+  extensionReadmeMd,
+} from "./src/templates/configs/extension.js";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -40,8 +45,22 @@ const question = (query) =>
   new Promise((resolve) => rl.question(query, resolve));
 
 async function init() {
-  const projectName = process.argv[2] || "my-isotope-app";
-  const root = path.resolve(projectName);
+  let projectName = process.argv[2];
+  let projectIndex = 2;
+
+  // 'create' サブコマンドの処理をより堅牢に
+  if (projectName === "create") {
+    projectName = process.argv[3];
+    projectIndex = 3;
+  }
+
+  // プロジェクト名が未指定、またはオプションが先に来てしまった場合の対処
+  if (!projectName || projectName.startsWith("-")) {
+    projectName = "my-isotope-app";
+  }
+
+  // 絶対パスとして解決
+  const root = path.resolve(process.cwd(), projectName);
 
   // 1. ポートの競合を解消
   console.log(chalk.cyan("🧹 Cleaning up ports 8000 and 5173..."));
@@ -50,14 +69,14 @@ async function init() {
     execSync('pkill -9 -f "php -S localhost:8000" || true');
   } catch (e) {}
 
-  const args = process.argv.slice(2);
+  const args = process.argv.slice(projectIndex + 1);
   let styleChoice = args
     .find((arg) => arg.startsWith("--style="))
     ?.split("=")[1];
 
   console.log(
     chalk.blueBright(
-      `\n⚛️  Isotope: Stabilizing new atomic structure at ${root}...\n`,
+      `\n⚛️  Isotope: Stabilizing new atomic structure at ${chalk.bold(root)}...\n`,
     ),
   );
 
@@ -82,6 +101,7 @@ async function init() {
     "src/components",
     "docs/framework",
     ".vscode",
+    ".vscode/extensions/isotope-support-v0.1/syntaxes",
   ];
   dirs.forEach((dir) => {
     fs.ensureDirSync(path.join(root, dir));
@@ -149,6 +169,8 @@ async function init() {
     JSON.stringify(tsConfigNode(), null, 2),
   );
   fs.writeFileSync(path.join(root, "README.md"), readmeMd());
+
+  // VS Code 設定 & 拡張機能
   fs.writeFileSync(
     path.join(root, ".vscode/settings.json"),
     JSON.stringify(
@@ -156,6 +178,21 @@ async function init() {
       null,
       2,
     ),
+  );
+  fs.writeFileSync(
+    path.join(root, ".vscode/extensions/isotope-support-v0.1/package.json"),
+    extensionPackageJson(),
+  );
+  fs.writeFileSync(
+    path.join(
+      root,
+      ".vscode/extensions/isotope-support-v0.1/syntaxes/isx.tmLanguage.json",
+    ),
+    extensionGrammarJson(),
+  );
+  fs.writeFileSync(
+    path.join(root, ".vscode/extensions/isotope-support-v0.1/README.md"),
+    extensionReadmeMd(),
   );
 
   // コンポーネント・ページ
@@ -173,10 +210,14 @@ async function init() {
     aboutPageIsx(styleChoice),
   );
 
-  // ロゴコピー
+  // ロゴ & 拡張機能アイコン
   const logoSrc = path.join(__dirname, "templates", "logo.png");
   if (fs.existsSync(logoSrc)) {
     fs.copySync(logoSrc, path.join(root, "public/logo.png"));
+    fs.copySync(
+      logoSrc,
+      path.join(root, ".vscode/extensions/isotope-support-v0.1/icon.png"),
+    );
   }
 
   // 4. package.json & インストール
@@ -201,6 +242,19 @@ async function init() {
   try {
     execSync(`npm install`, { cwd: root, stdio: "inherit" });
     console.log(chalk.green(`\n🚀 Ready! cd ${projectName} && npm run dev`));
+
+    console.log(chalk.cyan(`\n💡 VS Code Integration:`));
+    console.log(
+      chalk.white(
+        `  (JP) シンタックスハイライトを有効にするには、以下のコマンドでフォルダを開いてください:`,
+      ),
+    );
+    console.log(
+      chalk.white(
+        `  (EN) To enable syntax highlighting, please open the folder directly in VS Code:`,
+      ),
+    );
+    console.log(chalk.blueBright(`  > cd ${projectName} && code .\n`));
   } catch (err) {
     console.log(chalk.red(`\n❌ Install failed.`));
   }
