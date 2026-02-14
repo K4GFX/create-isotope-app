@@ -6,7 +6,7 @@ export const nucleus = proton\`
 // DATABASE CRUD EXAMPLE
 try {
     // In a real setup, you would have a 'posts' table
-    // $posts = \\\\Isotope\\\\Database::query("SELECT * FROM posts ORDER BY created_at DESC")->fetchAll();
+    // $posts = \\Isotope\\Database::query("SELECT * FROM posts ORDER BY created_at DESC")->fetchAll();
     
     // Mock data for demonstration if DB is not connected
     $posts = [
@@ -18,7 +18,7 @@ try {
         $action = $_POST['action'] ?? '';
         if ($action === 'create') {
             $title = $_POST['title'] ?? 'New Post';
-            // \\\\Isotope\\\\Database::query("INSERT INTO posts (title) VALUES (?)", [$title]);
+            // \\Isotope\\Database::query("INSERT INTO posts (title) VALUES (?)", [$title]);
             header("Location: /posts");
             exit;
         }
@@ -28,7 +28,7 @@ try {
         'posts' => $posts,
         'db_config' => $_ENV['DB_NAME'] ?? 'Not Configured'
     ];
-} catch (\\\\Exception $e) {
+} catch (\\Exception $e) {
     return ['error' => $e->getMessage(), 'posts' => []];
 }
 \`;
