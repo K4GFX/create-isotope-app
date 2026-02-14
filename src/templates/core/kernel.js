@@ -126,7 +126,18 @@ class Kernel {
             $replacement = "";
             if (isset($data[$listKey]) && is_array($data[$listKey])) {
                 foreach ($data[$listKey] as $item) {
-                    $replacement .= preg_replace('/\\\\{\\\\s*' . preg_quote($itemVar, '/') . '\\\\s*\\\\}/i', (string)$item, $itemTpl);
+                    $rowHtml = $itemTpl;
+                    if (is_array($item) || is_object($item)) {
+                        $itemArray = (array)$item;
+                        foreach ($itemArray as $k => $v) {
+                            if (is_scalar($v)) {
+                                $rowHtml = preg_replace('/\\\\{\\\\s*' . preg_quote($itemVar, '/') . '\\\\.' . preg_quote($k, '/') . '\\\\s*\\\\}/i', (string)$v, $rowHtml);
+                            }
+                        }
+                    } else {
+                        $rowHtml = preg_replace('/\\\\{\\\\s*' . preg_quote($itemVar, '/') . '\\\\s*\\\\}/i', (string)$item, $rowHtml);
+                    }
+                    $replacement .= $rowHtml;
                 }
             }
             return $replacement;
