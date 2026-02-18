@@ -1,15 +1,37 @@
 export const bridgePhp = () => `<?php
 header('Content-Type: application/json');
+require_once 'Kernel.php';
+\\Isotope\\Kernel::loadEnv();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? null;
     $params = $input['params'] ?? [];
-    
-    if ($action && is_callable($action)) {
-        $result = $action(...$params);
-        echo json_encode(['success' => true, 'data' => $result]);
-    } else {
-        echo json_encode(['success' => false, 'error' => 'Action not found']);
+    $token  = $input['token'] ?? null;
+
+    // トークンによる保護
+    $expectedToken = $_ENV['ISX_BRIDGE_TOKEN'] ?? '';
+    if ($expectedToken && $token !== $expectedToken) {
+        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+        exit;
+    }
+
+    try {
+        if ($action === 'db_query') {
+            $sql = $params['sql'];
+            $sqlParams = $params['params'] ?? [];
+            // サーバー内部ネットワークから本物のDBへクエリ実行
+            $result = \\Isotope\\Database::query($sql, $sqlParams)->fetchAll();
+            echo json_encode(['success' => true, 'data' => $result]);
+        } elseif ($action && is_callable($action)) {
+            // その他のRPC呼び出し
+            $result = $action(...$params);
+            echo json_encode(['success' => true, 'data' => $result]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Action not found']);
+        }
+    } catch (\\Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;
 }

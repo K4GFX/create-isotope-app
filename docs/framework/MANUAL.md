@@ -80,28 +80,41 @@ $users = \\Isotope\\Database::query("SELECT * FROM users")->fetchAll();
 \\Isotope\\Database::query("INSERT INTO users (name) VALUES (?)", [$name]);
 ```
 
-## 6. CRUD サンプル (/posts)
+## 6. Isotope Bridge (リモートDBプロキシ & RPC)
+
+レンタルサーバーの外部接続制限を回避し、ローカル開発環境からリモートDBを操作したり、サーバー側の関数を呼び出したりするための機能です。
+
+### 6-1. リモートDBプロキシ
+
+ローカルの `.env` で `ISX_BRIDGE_URL` を設定すると、`Database::query()` は自動的に HTTP(S) 経由で本番サーバーへクエリを中継します。
+
+```env
+# ローカルの .env 設定例
+ISX_BRIDGE_URL=https://あなたのドメイン.jp/core/Bridge.php
+ISX_BRIDGE_TOKEN=任意の強力なパスワード
+```
+
+### 6-2. Atomic Actions (RPC)
+
+`core/Bridge.php` を介して、APIエンドポイントを自作することなくサーバー側のPHP関数を実行できます。
+
+## 7. CRUD サンプル (/posts)
 
 新規プロジェクトには `/posts` パスに CRUD のサンプルコードが含まれています。
 `app/posts/page.isx` を参照して、データの取得とフォーム送信の実装方法を確認してください。
 
-## 7. Atomic Actions (Bridge)
-
-`core/Bridge.php` を使用して、APIを作成せずに PHP の関数を呼び出せます。
-(※現在は POST リクエストを受け取り、サーバーサイドで指定されたアクションを実行するプロトタイプとして組み込まれています)
-
-## 5. イメージ最適化 (Optimizer)
+## 8. イメージ最適化 (Optimizer)
 
 `core/optimizer.php` を経由することで、レンタルサーバー側で画像をリサイズして配信できます。
 
 **使用例:**
 `<img src="/core/optimizer.php?src=logo.png&w=200&q=80" />`
 
-## 6. ミドルウェア (middleware.php)
+## 9. ミドルウェア (middleware.php)
 
 `app/middleware.php` でリクエスト実行前の処理を定義できます。
 
-## 7. 本番環境へのデプロイ
+## 10. 本番環境へのデプロイ
 
 1. `npm run build` を実行してアセットを生成します。
 2. 生成されたすべてのファイルをサーバーにアップロードします。
