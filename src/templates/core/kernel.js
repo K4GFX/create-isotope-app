@@ -1,6 +1,15 @@
 export const kernelPhp = (styleChoice) => `<?php
 namespace Isotope;
 
+// Simple Autoloader for Core Classes
+spl_autoload_register(function ($class) {
+    if (str_starts_with($class, 'Isotope\\\\')) {
+        $name = str_replace('Isotope\\\\', '', $class);
+        $file = __DIR__ . "/$name.php";
+        if (file_exists($file)) require_once $file;
+    }
+});
+
 class Kernel {
     public static function boot() {
         self::loadEnv();
